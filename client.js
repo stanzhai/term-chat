@@ -1,48 +1,58 @@
 var net = require('net')
   , eadline = require('readline')
   , colors = require('colors')
-  , List = require('term-list');
+  , List = require('term-list')
+  , readline = require('readline')
+  , ChatLog = require('./chat');
 
-var rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout
-});
-var menu = new List({ marker: '>'.red + ' ', markerLength: 2 });
-menu.on('keypress', function(key, index) {
-  if (key.name === 'return') {
-    if (index == -4) {
-      open('https://github.com/stanzhai/luoo-down');
-    }
-    if (index < 0 || isDownloading != -1) {
-      return;
-    }
-  } else if (key.name === 'q') {
-    client.end();
-    return menu.stop();
-  }
-});
+var chatLog = new ChatLog();
+var from = ''
+  , to = '';
 
+var rl = readline.createInterface({input: process.stdin, output: process.stdout });
+
+function getUsers () {
+
+};
 function login () {
-  var ask = '请输入您的昵称：';
+  var ask = 'your name:';
   rl.question(ask, function(answer) {
-    client.write(JSON.stringify({ opt: 'login', name: answer}));
-    rl.close();
+    var info = answer.split(',');
+    from = info[0];
+    if (info.length != 1) {
+      to = info[1];
+    }
+    client.write(JSON.stringify({ opt: 'login', name: from}));
+    chat();
   });
 }
 
-var client = net.connect({host: 'zhaishidan.cn', port: 8124}, login);
+function chat() {
+  rl.question(from + '->' + (to || 'all') + ':', function(answer) {
+    chatLog.write(from + ':' + answer);
+    client.write(JSON.stringify({ opt: 'message', from: from, to: to, msg: answer}));
+    chat();
+  });
+}
+
+var client = net.connect({host: 'zhaishidan.cn', port: 8124}, function () {
+  client.write(JSON.stringify({ opt: 'users' }));
+});
 
 client.on('data', function(data) {
   var obj = JSON.parse(data);
   if (obj.opt == 'users') {
+    chatLog.write('current online:');
     for (var i = 0; i < obj.users.length; i++) {
       var user = obj.users[i];
-      menu.add(i, (i + 1) + '. ' + user.name.green + ' [' + user.ip.red + ']');
+      chatLog.write((i + 1) + '. ' + user.name.green + ' [' + user.ip.red + ']');
     };
+    login();
   } else if (obj.opt == 'message') {
-
+    chatLog.write(obj.from + ':' + obj.msg);
   }
 });
+
 client.on('end', function() {
   console.log('client disconnected');
 });

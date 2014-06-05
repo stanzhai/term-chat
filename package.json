@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "term-list": "^0.2.1",
-    "colors": "^0.6.2"
+    "colors": "^0.6.2",
+    "term-canvas": "0.0.5"
   }
 }
